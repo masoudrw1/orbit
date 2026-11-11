@@ -1,0 +1,41 @@
+# Roadmap
+
+## Learning milestone 1 — understand and run the foundation
+
+- Python interpreter, virtual environment, modules, functions, dataclasses.
+- Understand `core.py` through short exercises.
+- Run the tests and doctor report.
+- Open the GTK development window and launch one chosen app.
+- Review the repository before the first GitHub push.
+
+## Learning milestone 2 — COSMIC island and English voice
+
+- Build/package Layer Shell and validate positioning and keyboard focus.
+- Install the model and test a real microphone.
+- Type and speak the same command through the same catalog.
+- Measure wake false activations and command latency; keep an engine decision log.
+- Polish expansion/collapse animation and error states.
+
+## Learning milestone 3 — a useful Programming routine
+
+- Select application steps from a GUI.
+- Add a project directory to editor and terminal actions.
+- Add explicit PostgreSQL service actions with readiness and authorization.
+- Add routine edit/delete, cancellation, and resilient startup handling.
+
+## First public v1 — voice and typing together
+
+- A polished, measured COSMIC/Wayland experience; English UI and voice.
+- A tested keyboard shortcut or desktop shortcut fallback.
+- Reproducible `.deb` packaging, model onboarding, microphone selection.
+- Installation tested on a clean Pop!_OS machine.
+- Clear compatibility matrix, demo, contribution instructions, and release notes.
+- Do not mark v1 ready while speech, focus handling, or installation QA is pending.
+
+## Subsequent versions — Ubuntu/GNOME
+
+- Test the engine and normal window on selected Ubuntu/GNOME versions.
+- Design and implement the GNOME Shell presentation adapter.
+- Test GNOME version compatibility and Wayland permissions explicitly.
+- Share voice, catalog, action types, and routines across presentation backends.
+- Investigate app-content search only through explicit integrations.

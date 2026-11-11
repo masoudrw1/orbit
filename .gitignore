@@ -1,0 +1,14 @@
+.venv/
+.runtime/
+.models/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.idea/
+.vscode/
+.env
+*.wav
+*.pcm
+*.log

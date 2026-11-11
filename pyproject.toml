@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbit-linux-launcher"
+version = "0.1.0a1"
+description = "An English voice and keyboard launcher for the Linux desktop"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+dependencies = []
+
+[project.optional-dependencies]
+voice = ["vosk==0.3.45"]
+
+[project.scripts]
+orbit = "orbit.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["orbit*"]
+
+[tool.setuptools.package-data]
+orbit = ["style.css"]

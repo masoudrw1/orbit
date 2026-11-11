@@ -1,0 +1,27 @@
+.orbit-window { background: transparent; }
+.island { background: #11121a; color: #eeeef7; border-radius: 28px;
+  border: 1px solid #343347; box-shadow: 0 12px 38px alpha(#000, 0.34); }
+.panel { padding: 22px; }
+.compact { padding: 0 14px; }
+.logo { font-size: 30px; color: #ae9dff; }
+.title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+.badge { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #ae9dff;
+  background: #27233a; border-radius: 6px; padding: 5px 8px; }
+.muted { color: #9797ad; font-size: 11px; }
+.results { background: transparent; }
+.results row { border-radius: 12px; margin: 2px 0; }
+.results row:selected { background: #2c2743; }
+.result { padding: 9px 12px; }
+.result-title { color: #eeeef7; font-size: 14px; font-weight: 600; }
+.status { color: #b8b5cf; font-size: 12px; min-height: 34px; }
+entry, searchentry { background: #1c1d2a; color: #f5f3ff; border: 1px solid #3d3c53;
+  border-radius: 12px; padding: 9px 12px; box-shadow: none; }
+entry:focus, searchentry:focus-within { border-color: #a594ef; }
+button { background: #242433; color: #eeeeff; border: none; border-radius: 10px;
+  padding: 7px 12px; box-shadow: none; }
+button:hover { background: #37354c; }
+button.flat { background: transparent; }
+button.flat:hover { background: #2d2b40; }
+button.suggested-action { background: #ab98f4; color: #171326; font-weight: 700; }
+button:checked { background: #43365f; }
+expander { color: #bdb7d7; }
