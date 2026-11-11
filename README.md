@@ -6,8 +6,9 @@ Orbit is an early English voice and keyboard launcher with an expandable island
 interface. Search installed desktop applications, group them into a named routine,
 and launch them by typing or speaking a phrase such as **Programming**.
 
-This repository is a learning-oriented **alpha foundation**, not a completed v1.
-Voice and typing are both required for v1. There is no release package yet.
+This repository is a learning-oriented **alpha**, not a completed v1.
+Alpha 2 adds a buildable `.deb` installer and persistent Hey Orbit activation.
+No GitHub Release or public download asset has been published by this change.
 
 ![Orbit early alpha](docs/preview.png)
 
@@ -15,6 +16,33 @@ Voice and typing are both required for v1. There is no release package yet.
 
 New to Python? Read [the guided Persian walkthrough](docs/START_HERE_FA.md).
 The interface and public project documentation are in English.
+
+## Install and activate (alpha 2)
+
+Initial target: **Pop!_OS 24.04, amd64, COSMIC/Wayland**. The package includes the
+English speech model, Vosk, and a private Layer Shell runtime. APT manages GTK,
+the microphone recorder, and standard Python dependencies. No checkout or venv
+is needed by the installed app. APT may need internet for missing system packages.
+
+From the directory containing the built installer:
+
+```bash
+sudo apt install './orbit-launcher_0.1.0~alpha2-1_amd64.deb'
+```
+
+Open **Orbit** from the application menu and click **Activate Hey Orbit**. The
+optional **Start Orbit when I sign in** setting is applied at activation. Orbit
+then hides completely. Say **Hey Orbit**, pause, then an app or routine name.
+The island opens on the wake event. Escape or **−** hides it again.
+
+Open Orbit from the application menu to return to its controls. **Deactivate Hey
+Orbit** stops listening, clears saved activation, and removes Orbit's login entry.
+**× / Quit Orbit** stops the current process; saved activation is retained for the
+next sign-in. Launching Orbit again reopens the same instance, not another listener.
+Microphone failures reveal the controls rather than silently hiding an error.
+
+See [installation and recovery](docs/INSTALL.md) and the
+[Persian guide to this development phase](docs/PHASE_INSTALLER_FA.md).
 
 ### Development setup: Pop!_OS / Ubuntu 24.04
 
@@ -64,12 +92,12 @@ It is not equivalent to a GNOME desktop island.
 1. Type an installed application name and press Enter. Up/Down selects a result.
 2. Use **+** next to two applications. Expand **Build your first routine**.
 3. Name it `Programming`, add spoken aliases such as `start coding`, then save.
-4. Click **Enable voice**. Only this action opens the default microphone.
+4. Click **Activate Hey Orbit**. This saves activation and starts the microphone.
 5. Say **Hey Orbit**, pause, then **Programming** or **start coding**.
-6. Press Escape or **−** to collapse the island. Click Orbit to expand it.
-7. Disable voice to stop the microphone. **×** quits the application.
+6. With voice active, Escape or **−** hides the island. Reopen Orbit from the app menu.
+7. Deactivate to stop persistent activation; **×** quits until the next launch/sign-in.
 
-There is no global keyboard shortcut yet; typing is available by clicking the island.
+There is no global keyboard shortcut yet; typing is available by opening Orbit.
 Launching a desktop app is a request to the desktop, not proof that its window is
 fully ready. Routine launch requests are sent in order, with independent errors;
 they do not yet wait for application or service readiness.
@@ -88,6 +116,9 @@ audio is not uploaded or saved by Orbit.
 | Python command catalog, configuration, voice activation state | Automated unit tests |
 | COSMIC / Wayland island adapter | Short real-session smoke test passed on the initial machine; broader desktop QA pending |
 | English speech recognition | Synthetic English audio passed through real Vosk and command activation; real microphone/accent/noise testing pending |
+| Hidden activation, wake reveal, recovery, same-instance reopening | GTK integration checks passed with a fake microphone adapter |
+| Login startup | Saved preference + background-resume tests; actual logout/login QA pending |
+| `.deb` installation | Installed on the original development machine; clean-machine QA pending |
 | GNOME / Ubuntu regular window | Development fallback; desktop QA pending |
 | GNOME / Wayland native island | Planned separate integration; Layer Shell does not support it |
 | Start PostgreSQL as a service | Planned; not an application-launch action in this alpha |
@@ -112,7 +143,28 @@ GTK and microphone packages are not required for core unit tests.
 `ORBIT_CONFIG_PATH=/absolute/path/routines.json` overrides the normal user
 configuration at `$XDG_CONFIG_HOME/orbit/routines.json` (default `~/.config/orbit`).
 The speech model path can be overridden with `--model /absolute/path/to/model`.
-Voice must be re-enabled after creating a routine to refresh its vocabulary.
+An activated listener refreshes its vocabulary after a routine is created.
+
+### Known voice limitation
+
+The initial user test reported an IntelliJ command being recognized as a different
+phrase. The exact spoken phrase and transcript are still needed for diagnosis.
+The registered English alias **open idea** maps to IntelliJ IDEA on the initial
+machine and can be tried as a workaround. Arbitrary product-name recognition is
+not yet reliable; this alpha is not a completed voice-recognition release.
+
+### Build the installer
+
+```bash
+python3 tools/build_deb.py --fetch
+```
+
+The explicit `--fetch` populates `.build-assets` from the pinned, verified official
+URLs in `packaging/assets.json`. The original model in `.models` is checked against
+its pinned tree digest. Later builds can run offline without `--fetch`.
+The output is under `dist/`; neither the model, native build cache, nor installer
+is committed to Git. Runtime dependencies are declared to APT, not copied from
+the developer's `.venv`. See [component provenance](packaging/THIRD_PARTY.md).
 
 ## License
 

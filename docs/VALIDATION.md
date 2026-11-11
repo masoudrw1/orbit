@@ -1,5 +1,8 @@
 # Initial development validation — 2026-11-11
 
+For the installer/activation phase added on 2026-11-12, see
+`docs/VALIDATION_INSTALLER.md`. The sections below record the original prototype.
+
 Environment: Pop!_OS 24.04 LTS, COSMIC, Wayland, Python 3.12.3, GTK 4.14.
 
 Executed checks:

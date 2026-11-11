@@ -33,13 +33,13 @@ class VoiceListener:
     def _run(self) -> None:
         try:
             if not (self.model_path / "am" / "final.mdl").is_file():
-                raise RuntimeError("English model is missing. Run tools/download_model.py first.")
+                raise RuntimeError("The English speech model is missing. Reinstall Orbit or check the development setup.")
             if not shutil.which("parec"):
-                raise RuntimeError("Microphone recorder is missing: install pulseaudio-utils.")
+                raise RuntimeError("Microphone recording is unavailable. Check that Orbit's required system packages are installed.")
             try:
                 from vosk import Model, KaldiRecognizer, SetLogLevel
             except ImportError as exc:
-                raise RuntimeError("Voice package is missing. In the virtual environment run: python -m pip install '.[voice]'") from exc
+                raise RuntimeError("The speech engine is unavailable. Reinstall Orbit or check the development setup.") from exc
             self.emit("loading", "Loading the offline English speech model…")
             SetLogLevel(-1)
             model = Model(str(self.model_path))

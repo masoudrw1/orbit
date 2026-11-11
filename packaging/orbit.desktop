@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Orbit
+Comment=Your Linux workspace, one phrase away
+Exec=/usr/bin/orbit
+TryExec=/usr/bin/orbit
+Icon=io.github.masoudrw1.Orbit
+Terminal=false
+Categories=Utility;
+Keywords=launcher;voice;search;assistant;
+StartupNotify=true
+Actions=Quit;
+
+[Desktop Action Quit]
+Name=Quit Orbit
+Exec=/usr/bin/orbit --quit

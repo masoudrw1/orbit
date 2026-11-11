@@ -1,5 +1,15 @@
 # Roadmap
 
+## Current phase — installer and hidden activation (alpha 2)
+
+- Existing prototype and initial GitHub push are the baseline; continue that code.
+- Build a `.deb` containing the model and private native runtime, with standard dependencies managed by APT.
+- Explicit activation hides Orbit; Hey Orbit reveals it.
+- Persist activation and optional login startup; reopen a single instance from the menu.
+- Test the installer payload, then complete privileged installation and real login/microphone QA.
+- Review and commit this phase before its push. No automatic GitHub Release publication.
+- See `docs/PHASE_INSTALLER_FA.md` for this phase's learning path and acceptance checks.
+
 ## Learning milestone 1 — understand and run the foundation
 
 - Python interpreter, virtual environment, modules, functions, dataclasses.

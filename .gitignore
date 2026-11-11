@@ -1,6 +1,7 @@
 .venv/
 .runtime/
 .models/
+.build-assets/
 __pycache__/
 *.py[cod]
 *.egg-info/

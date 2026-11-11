@@ -1,0 +1,25 @@
+{
+  "vosk": {
+    "filename": "vosk-0.3.45-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+    "url": "https://files.pythonhosted.org/packages/fc/ca/83398cfcd557360a3d7b2d732aee1c5f6999f68618d1645f38d53e14c9ff/vosk-0.3.45-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+    "sha256": "25e025093c4399d7278f543568ed8cc5460ac3a4bf48c23673ace1e25d26619f"
+  },
+  "native": [
+    {
+      "filename": "libgtk4-layer-shell0_1.0.4-2_amd64.deb",
+      "url": "https://deb.debian.org/debian/pool/main/g/gtk4-layer-shell/libgtk4-layer-shell0_1.0.4-2_amd64.deb",
+      "sha256": "303a974dd81ccf1e88f6261fd5503cd29f0f9e36268a1d09c9bcf5f1de44e47f"
+    },
+    {
+      "filename": "gir1.2-gtk4layershell-1.0_1.0.4-2_amd64.deb",
+      "url": "https://deb.debian.org/debian/pool/main/g/gtk4-layer-shell/gir1.2-gtk4layershell-1.0_1.0.4-2_amd64.deb",
+      "sha256": "dd5bd3d187f537305747c630eb63db33e2b540392b55836f4da7009ea0ff246c"
+    }
+  ],
+  "model": {
+    "name": "vosk-model-small-en-us-0.15",
+    "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+    "archive_sha256": "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498",
+    "tree_sha256": "b42e54229873c6a3a59875cefb7fafa2d8a7d5aeabbaa82b7572fa897e0fb19b"
+  }
+}

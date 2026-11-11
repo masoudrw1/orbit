@@ -31,12 +31,19 @@ if _layer_library:
 from .config import Routine, config_path, read_routines, save_routines
 from .desktop import build_catalog, discover_apps, launch_app
 from .voice import VoiceListener
+from .activation import APP_ID, Preferences, apply_preferences, launcher_path, read_preferences
 
 
 class OrbitApp(Gtk.Application):
     def __init__(self, model: Path, window_mode: bool, smoke_test: bool):
-        super().__init__(application_id="io.github.orbit.launcher",
-                         flags=Gio.ApplicationFlags.NON_UNIQUE)
+        flags = Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+        if smoke_test:
+            flags |= Gio.ApplicationFlags.NON_UNIQUE
+        super().__init__(application_id=APP_ID, flags=flags)
+        self.add_main_option("background", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
+                             "Resume activation in the background", None)
+        self.add_main_option("quit", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
+                             "Quit the running Orbit instance", None)
         self.model, self.window_mode, self.smoke_test = model, window_mode, smoke_test
         self.window = None
         self.listener = None
@@ -45,10 +52,39 @@ class OrbitApp(Gtk.Application):
         self.selected_apps: list[str] = []
         self.expanded = True
         self.busy = False
+        self.background_requested = False
+        self.hide_when_ready = False
+        self.hide_source = None
+        self.voice_interaction = False
+        self.preferences_error = None
+        try:
+            self.preferences = read_preferences()
+        except (OSError, ValueError) as exc:
+            self.preferences = Preferences()
+            self.preferences_error = f"Could not read activation settings: {exc}"
+
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
+        # A hidden, activated Orbit must survive with no mapped windows.
+        self.hold()
+
+    def do_command_line(self, command_line):
+        options = command_line.get_options_dict()
+        if options.contains("quit"):
+            self.quit_orbit()
+            return 0
+        self.background_requested = options.contains("background")
+        if self.background_requested and not self.preferences.enabled and not self.preferences_error:
+            if self.window is None:
+                self.quit()
+            return 0
+        self.activate()
+        return 0
 
     def do_activate(self):
         if self.window:
-            self.window.present()
+            if not self.background_requested:
+                self.expand()
             return
         self.apps = discover_apps()
         self.path = config_path()
@@ -119,12 +155,14 @@ class OrbitApp(Gtk.Application):
         title.add_css_class("title")
         title.set_hexpand(True)
         header.append(title)
-        badge = Gtk.Label(label="EARLY ALPHA")
+        badge = Gtk.Label(label="ALPHA 2")
         badge.add_css_class("badge")
         header.append(badge)
-        for label, callback in [("−", lambda *_: self.collapse()), ("×", lambda *_: self.window.close())]:
+        for label, callback, tooltip in [("−", lambda *_: self.collapse(), "Hide Orbit; activated voice keeps listening"),
+                                         ("×", lambda *_: self.quit_orbit(), "Quit Orbit and stop the microphone")]:
             button = Gtk.Button(label=label)
             button.add_css_class("flat")
+            button.set_tooltip_text(tooltip)
             button.connect("clicked", callback)
             header.append(button)
         panel.append(header)
@@ -165,7 +203,8 @@ class OrbitApp(Gtk.Application):
         panel.append(builder)
 
         footer = Gtk.Box(spacing=10)
-        self.voice_button = Gtk.ToggleButton(label="Enable voice")
+        self.voice_button = Gtk.ToggleButton(label="Activate Hey Orbit")
+        self.voice_button.add_css_class("suggested-action")
         self.voice_button.connect("toggled", self.toggle_voice)
         footer.append(self.voice_button)
         mode = Gtk.Label(label="COSMIC island" if self.is_island else "Window mode")
@@ -174,19 +213,32 @@ class OrbitApp(Gtk.Application):
         mode.set_xalign(1)
         footer.append(mode)
         panel.append(footer)
+        self.login_check = Gtk.CheckButton(label="Start Orbit when I sign in")
+        self.login_check.set_active(self.preferences.start_at_login if self.preferences.enabled else True)
+        self.login_check.connect("toggled", self.change_startup)
+        panel.append(self.login_check)
         self.status = Gtk.Label(label="", xalign=0, wrap=True)
         self.status.add_css_class("status")
         self.status.set_max_width_chars(60)
         panel.append(self.status)
         self.refresh_results()
-        if config_error:
+        if self.preferences_error:
+            self.set_status(self.preferences_error)
+        elif config_error:
             self.set_status(config_error)
         elif not self.is_island:
-            self.set_status("Development window · Install Layer Shell for the anchored island. Voice starts only when enabled.")
+            self.set_status("Window mode · Activate voice to listen for Hey Orbit. The native GNOME island is not yet supported.")
         else:
-            self.set_status("Search an app, build a routine, or enable offline voice.")
+            self.set_status("Activate Hey Orbit to listen offline. Orbit will hide until you call it. Open Orbit from the app menu to return here.")
         self.stack.set_visible_child_name("expanded")
-        self.window.present()
+        if not self.background_requested or self.preferences_error:
+            self.window.present()
+        if self.preferences.enabled and not self.smoke_test and not self.preferences_error:
+            self.updating_switch = True
+            self.voice_button.set_active(True)
+            self.voice_button.set_label("Deactivate Hey Orbit")
+            self.updating_switch = False
+            self.start_voice(hide_when_ready=self.background_requested)
         if self.smoke_test:
             GLib.timeout_add(250, self._smoke_collapse)
             GLib.timeout_add(500, self._smoke_expand)
@@ -271,6 +323,8 @@ class OrbitApp(Gtk.Application):
             summary = (f"{len(self.routine_failures)} launch request(s) failed: " + "; ".join(self.routine_failures)
                        if self.routine_failures else f"Sent {self.routine_total} launch requests. Apps may still be starting.")
             self.set_status(summary)
+            if self.voice_interaction:
+                self.schedule_hide()
         return False
 
     def add_selection(self, app_id):
@@ -301,27 +355,71 @@ class OrbitApp(Gtk.Application):
             return
         self.routines = proposed
         self.catalog = build_catalog(self.apps, self.routines)
-        self.voice_button.set_active(False)
+        if self.preferences.enabled:
+            self.start_voice(hide_when_ready=False)
         self.clear_selection()
         self.routine_name.set_text("")
         self.routine_aliases.set_text("")
         self.refresh_results()
-        self.set_status(f"Saved {name}. Enable voice to load the updated command list.")
+        self.set_status(f"Saved {name}. Voice vocabulary refreshed." if self.preferences.enabled else
+                        f"Saved {name}. Activate Hey Orbit to use it by voice.")
+
+    def change_startup(self, button):
+        if self.updating_switch or not self.preferences.enabled:
+            return
+        try:
+            updated = Preferences(True, button.get_active())
+            apply_preferences(updated, launcher_path())
+            self.preferences = updated
+        except (OSError, ValueError) as exc:
+            self.updating_switch = True
+            button.set_active(self.preferences.start_at_login)
+            self.updating_switch = False
+            self.set_status(f"Could not update login startup: {exc}")
 
     def toggle_voice(self, button):
         if self.updating_switch:
             return
+        disabling = not button.get_active()
+        if disabling:
+            # Stopping the microphone must not depend on a successful disk write.
+            self.stop_voice()
+        try:
+            updated = Preferences(button.get_active(),
+                                  button.get_active() and self.login_check.get_active())
+            apply_preferences(updated, launcher_path())
+            self.preferences = updated
+            self.preferences_error = None
+        except (OSError, ValueError) as exc:
+            self.updating_switch = True
+            button.set_active(self.preferences.enabled)
+            self.updating_switch = False
+            self.set_status(f"Microphone stopped, but deactivation could not be saved. Retry or quit Orbit. Saved startup may still be enabled: {exc}"
+                            if disabling else f"Could not save activation: {exc}")
+            return
+        if button.get_active():
+            button.set_label("Deactivate Hey Orbit")
+            self.start_voice(hide_when_ready=True)
+        else:
+            self.stop_voice()
+            button.set_label("Activate Hey Orbit")
+            self.updating_switch = True
+            self.login_check.set_active(False)
+            self.updating_switch = False
+            self.compact_status.set_text("Ready")
+            self.set_status("Deactivated · Microphone off. Login startup has been removed.")
+
+    def stop_voice(self):
         self.voice_epoch += 1
-        epoch = self.voice_epoch
+        self.hide_when_ready = False
         if self.listener:
             self.listener.stop()
             self.listener = None
-        if not button.get_active():
-            button.set_label("Enable voice")
-            self.compact_status.set_text("Ready")
-            self.set_status("Microphone off")
-            return
-        button.set_label("Disable voice")
+
+    def start_voice(self, hide_when_ready):
+        self.stop_voice()
+        self.hide_when_ready = hide_when_ready
+        epoch = self.voice_epoch
         self.compact_status.set_text("Loading…")
         self.listener = VoiceListener(self.model, self.catalog.voice_phrases(),
                                       lambda event, text: GLib.idle_add(self.on_voice, epoch, event, text))
@@ -333,8 +431,13 @@ class OrbitApp(Gtk.Application):
         if event in {"loading", "ready", "timeout"}:
             self.set_status(text)
             self.compact_status.set_text("Mic on" if event != "loading" else "Loading…")
+            if event == "ready" and self.hide_when_ready:
+                self.hide_when_ready = False
+                self.hide_island()
+            elif event == "timeout" and self.voice_interaction:
+                self.collapse()
         elif event == "wake":
-            self.expand()
+            self.expand(from_voice=True)
             self.compact_status.set_text("Listening")
             self.set_status("Listening… Say an app name or a saved routine.")
         elif event == "command":
@@ -344,18 +447,21 @@ class OrbitApp(Gtk.Application):
             else:
                 self.set_status(f'Heard “{text}”. No unique exact match; nothing was launched.')
             self.compact_status.set_text("Mic on")
+            if self.voice_interaction and not self.busy:
+                self.schedule_hide()
         elif event == "cancel":
             self.collapse()
         elif event == "error":
+            self.expand()
             self.set_status(text)
             self.compact_status.set_text("Voice error")
-            self.updating_switch = True
-            self.voice_button.set_active(False)
-            self.voice_button.set_label("Enable voice")
-            self.updating_switch = False
         return False
 
-    def expand(self):
+    def expand(self, from_voice=False):
+        if self.hide_source:
+            GLib.source_remove(self.hide_source)
+            self.hide_source = None
+        self.voice_interaction = from_voice
         self.expanded = True
         self.stack.set_visible_child_name("expanded")
         if self.is_island:
@@ -364,15 +470,37 @@ class OrbitApp(Gtk.Application):
         self.search.grab_focus()
 
     def collapse(self):
+        if self.preferences.enabled:
+            self.hide_island()
+            return
         self.expanded = False
         self.stack.set_visible_child_name("compact")
         if self.is_island:
             LayerShell.set_keyboard_mode(self.window, LayerShell.KeyboardMode.ON_DEMAND)
 
+    def hide_island(self):
+        self.expanded = False
+        self.voice_interaction = False
+        if self.is_island:
+            LayerShell.set_keyboard_mode(self.window, LayerShell.KeyboardMode.ON_DEMAND)
+        self.window.set_visible(False)
+
+    def schedule_hide(self):
+        if self.hide_source:
+            GLib.source_remove(self.hide_source)
+        self.hide_source = GLib.timeout_add(1800, self.hide_after_command)
+
+    def hide_after_command(self):
+        self.hide_source = None
+        if self.preferences.enabled and self.voice_interaction and not self.busy:
+            self.hide_island()
+        return False
+
     def on_key(self, _, keyval, keycode, state):
         if keyval == Gdk.KEY_Escape:
             self.collapse()
             return True
+        self.voice_interaction = False
         if keyval in (Gdk.KEY_Up, Gdk.KEY_Down):
             row = self.results.get_selected_row()
             index = row.get_index() if row else -1
@@ -383,10 +511,19 @@ class OrbitApp(Gtk.Application):
         return False
 
     def on_close(self, *_):
-        self.voice_epoch += 1
-        if self.listener:
-            self.listener.stop()
+        self.quit_orbit()
         return False
+
+    def quit_orbit(self):
+        self.stop_voice()
+        if self.hide_source:
+            GLib.source_remove(self.hide_source)
+            self.hide_source = None
+        self.quit()
+
+    def do_shutdown(self):
+        self.stop_voice()
+        Gtk.Application.do_shutdown(self)
 
     def _smoke_collapse(self):
         self.collapse()
@@ -415,7 +552,13 @@ class OrbitApp(Gtk.Application):
         return False
 
 
-def run(model: Path, window_mode: bool, smoke_test: bool) -> int:
+def run(model: Path, window_mode: bool, smoke_test: bool,
+        background: bool = False, quit_requested: bool = False) -> int:
     if not Gtk.init_check() or Gdk.Display.get_default() is None:
         raise RuntimeError("No graphical session available. Use --doctor or run from your desktop terminal.")
-    return OrbitApp(model, window_mode, smoke_test).run([])
+    arguments = ["orbit"]
+    if background:
+        arguments.append("--background")
+    if quit_requested:
+        arguments.append("--quit")
+    return OrbitApp(model, window_mode, smoke_test).run(arguments)
